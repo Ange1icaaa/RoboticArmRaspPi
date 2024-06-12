@@ -1,0 +1,260 @@
+#tkinter is used for GUI
+import tkinter as tk
+#RPi.GPIO allows us to use raspberry pi pins
+import RPi.GPIO as GPIO
+#Set time for servos
+import time
+#import for serial
+import serial
+
+#GPIO Pins for the servos (Raspberry pi numbering)
+servoPins = [11, 12, 13, 15, 16]
+
+#Initialize GPIO
+GPIO.setmode(GPIO.BOARD)  #Use Raspberry pi board numbering
+for pin in servoPins: #for every pin in our set of servo pins...
+    GPIO.setup(pin, GPIO.OUT)  #Set pins as output
+    GPIO.output(pin, GPIO.LOW)  #Set initial state to low(off) vs high(on)
+
+#RBG LEDS
+GPIO.setup(18, GPIO.OUT)
+GPIO.setup(19, GPIO.OUT)
+GPIO.setup(21, GPIO.OUT)
+
+#Defining color sensor pins
+s2 = 35
+s3 = 33
+signal = 36
+NUM_CYCLES = 10
+
+#Setting up color sensor pins
+def setupColor():
+  GPIO.setup(signal,GPIO.IN, pull_up_down=GPIO.PUD_UP)
+  GPIO.setup(s2,GPIO.OUT)
+  GPIO.setup(s3,GPIO.OUT)
+  print("\n")
+  
+#Reads color, determines global color var, enables Start Sort button  
+def colorLoop():
+  temp = 0
+  global color
+  tempRed = 0
+  tempBlue = 0
+  tempGreen = 0
+  while(temp < 10):  
+
+    GPIO.output(s2,GPIO.LOW)
+    GPIO.output(s3,GPIO.LOW)
+    time.sleep(0.3)
+    start = time.time()
+    for impulse_count in range(NUM_CYCLES):
+      GPIO.wait_for_edge(signal, GPIO.FALLING)
+    duration = time.time() - start 
+    red  = NUM_CYCLES / duration
+    print("red value - ",red)   
+   
+    GPIO.output(s2,GPIO.LOW)
+    GPIO.output(s3,GPIO.HIGH)
+    time.sleep(0.3)
+    start = time.time()
+    for impulse_count in range(NUM_CYCLES):
+      GPIO.wait_for_edge(signal, GPIO.FALLING)
+    duration = time.time() - start
+    blue = NUM_CYCLES / duration
+    print("blue value - ",blue)
+
+    GPIO.output(s2,GPIO.HIGH)
+    GPIO.output(s3,GPIO.HIGH)
+    time.sleep(0.3)
+    start = time.time()
+    for impulse_count in range(NUM_CYCLES):
+      GPIO.wait_for_edge(signal, GPIO.FALLING)
+    duration = time.time() - start
+    green = NUM_CYCLES / duration
+    print("green value - ",green)
+    time.sleep(.5)
+      
+    if (red > green) & (red > blue):
+      print("red")
+      GPIO.output(18, GPIO.HIGH)
+      time.sleep(.5)
+      GPIO.output(18, GPIO.LOW)
+      temp += 1
+      tempRed += 1
+    elif (green > red) & (green > blue):
+      print("green")
+      GPIO.output(19, GPIO.HIGH)
+      time.sleep(.5)
+      GPIO.output(19, GPIO.LOW)
+      temp = temp+1
+      tempGreen += 1
+    elif (blue > red) & (blue > green):
+      print("blue")
+      GPIO.output(21, GPIO.HIGH)
+      time.sleep(.5)
+      GPIO.output(21, GPIO.LOW)
+      temp = temp+1
+      tempBlue += 1
+      
+    else:
+        print("Could not categorize")
+  
+  if(tempRed >= 5):
+    color = "Red"
+  elif(tempGreen >= 5):
+    color = "Green"
+  elif(tempBlue >= 5):
+    color = "Blue"
+    
+
+  print(f"THE FINAL COLOR: {color}")
+  
+  colorButton.pack(side=tk.TOP, padx=10, pady=10)
+  
+#Places object in speciific zone based off global color var
+def sortingLoop():
+    if (color == "Red"):
+        updateServo(4, 180) #Close claw
+        time.sleep(1)
+        updateServo(1, 0) #Lift up
+        time.sleep(1)
+        updateServo(0, 0) #Swivel to red spot
+        time.sleep(1)
+        updateServo(1, 55) #Strech down
+        time.sleep(1)
+        updateServo(2, 150) #Stretch down
+        time.sleep(1)
+        updateServo(4, 0) #Open claw
+        time.sleep(1)
+        updateServo(1, 0) #Lift up
+        time.sleep(1)
+        updateServo(4, 180) #Close claw
+        time.sleep(1)
+        updateServo(0, 90) #Swivel back to Pick Up zone
+        updateServo(1, 55) #Set to a "default" position
+        updateServo(2, 114) 
+        updateServo(4, 1) 
+    elif (color == "Green"):
+        updateServo(4, 180) #Close claw
+        time.sleep(1)
+        updateServo(1, 0) #Lift up
+        time.sleep(1)
+        updateServo(0, 45) #Swivel to green spot
+        time.sleep(1)
+        updateServo(1, 55) #Strech down
+        time.sleep(1)
+        updateServo(2, 150) #Stretch down
+        time.sleep(1)
+        updateServo(4, 0) #Open claw
+        time.sleep(1)
+        updateServo(1, 0) #Lift up
+        time.sleep(1)
+        updateServo(4, 180) #Close claw
+        time.sleep(1)
+        updateServo(0, 90) #Swivel back to Pick Up zone
+        updateServo(1, 55) #Set to a "default" position
+        updateServo(2, 114) 
+        updateServo(4, 1) 
+    elif (color == "Blue"):
+        updateServo(4, 180) #Close claw
+        time.sleep(1)
+        updateServo(1, 0) #Lift up
+        time.sleep(1)
+        updateServo(0, 180) #Swivel to blue spot
+        time.sleep(1)
+        updateServo(1, 55) #Strech down
+        time.sleep(1)
+        updateServo(2, 150) #Stretch down
+        time.sleep(1)
+        updateServo(4, 0) #Open claw
+        time.sleep(1)
+        updateServo(1, 0) #Lift up
+        time.sleep(1)
+        updateServo(4, 180) #Close claw
+        time.sleep(1)
+        updateServo(0, 90) #Swivel back to Pick Up zone
+        updateServo(1, 55) #Set to a "default" position
+        updateServo(2, 114) 
+        updateServo(4, 1) 
+    else:
+        print("ERROR WITH COLOR VAR! CAN'T SORT!")
+
+#Function to set angle of servo
+def setAngle(servo, angle):
+    duty = angle / 18 + 2  #Calculate duty cycle based on angle
+    GPIO.output(servo, True)  #Turn servo pin on
+    pwm = GPIO.PWM(servo, 50)  #Create Pulse width modulator
+                               #object with frequency 50 Hz (typical servo frequency)
+    pwm.start(0)  #Start PWM with duty cycle 0
+    pwm.ChangeDutyCycle(duty)  #Change duty cycle to move servo
+    time.sleep(0.5)  #Wait for servo to reach position
+    pwm.stop()  #Stop PWM
+    GPIO.output(servo, False)  #Turn servo pin off
+
+# Function to update servo angle when slider moves
+def updateServo(servoIdx, angleStr):
+    angle = int(angleStr)  #Convert angle string to integer
+    servoPin = servoPins[servoIdx]  #Get GPIO pin for servo
+    setAngle(servoPin, angle)  #Call the set angle function
+
+# Create GUI
+root = tk.Tk()  #Create main window
+root.title("Servo Control :)")  #Set window title
+
+servoSliders = []  #List to hold servo sliders
+
+#Create sliders for each servo
+for i in range(5):
+    servoFrame = tk.Frame(root)  #Create frame for servo controls
+    servoFrame.pack(side=tk.TOP, padx=10, pady=10)  #Pack frame into main window
+    
+    servoLabel = tk.Label(servoFrame, text=f"Servo {i+1}")  #Label for servo
+    servoLabel.pack(side=tk.LEFT)  #Pack label into frame
+    
+    servoSlider = tk.Scale(servoFrame, from_=0, to=180, length=300, orient=tk.HORIZONTAL, command=lambda angle, idx=i: updateServo(idx, angle))
+    #Slider for servo angle, range 0-180 degrees
+    if i == 3:
+        servoSlider.set(180) #Set initial position of servo 4 to horizontal
+    elif i == 1:
+        servoSlider.set(55)
+    elif i == 2:
+        servoSlider.set(114)
+    elif i == 4:
+        servoSlider.set(1)
+    else:
+        servoSlider.set(90) #Set initial position to 0 degrees
+    servoSlider.pack(side=tk.LEFT)  #Pack slider into frame
+    
+    servoSliders.append(servoSlider)  #Add slider to servosliders list
+
+#Sets up Sense Color and Start Sort buttons. (Start Sort is NOT placed on GUI immediately
+colorButton = tk.Button(text= "Sense Color", command=colorLoop)
+colorButton.pack(side=tk.TOP, padx=10, pady=10)
+colorButton = tk.Button(text= "Start Sort", command=sortingLoop)
+
+#Exit function
+def exitProgram():
+    updateServo(0, 90) #Set to a "default" position before ending
+    updateServo(1, 55) 
+    updateServo(2, 114) 
+    updateServo(4, 1) 
+    GPIO.cleanup()  #Cleanup GPIO pins
+    root.destroy()  #Destroy main window
+
+#Exit button
+exitButton = tk.Button(root, text="Exit", command=exitProgram)  #Button to exit program
+exitButton.pack(side=tk.BOTTOM, pady=10)  #Pack button into main window
+
+setupColor()
+root.mainloop()  #Start GUI main loop
+if __name__=='__main__':
+    
+    #setup()
+
+    try:
+       colorLoop()
+
+    except KeyboardInterrupt:
+        exitProgram()
+
+
